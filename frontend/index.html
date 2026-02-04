@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Federal Ministry of Youth Development</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <img src="FMYD (2).png" alt="Federal Ministry of Youth Development Logo">
+    </div>
+  </header>
+  <main>
+    <div class="content-card">
+      <section class="section-fme">
+        <h1>HM</h1> 
+        <br> 
+        <h3>Evaluation and Monitoring Desk</h3>
+      </section>
+
+      <div id="email-box">
+        <h2>Enter Your Email</h2>
+        <p>Enter your email to receive a 6-digit verification code.</p>
+
+        <div class="email-input-wrapper">
+          <input type="email" id="email-input" placeholder="your.email@example.com" />
+        </div>
+
+        <button onclick="requestOtp()">Send Code</button>
+
+        <div id="email-error" style="color: red; margin-top: 12px; display: none;"></div>
+      </div>
+
+      <button class="login-button" id="login-button" onclick="showEmailBox()" style="display: block;">
+        LOGIN
+      </button>
+
+      <div id="otp-box" style="display: none;">
+        <h2>Enter 6-Digit Code</h2>
+        <p>A 6-digit verification code has been sent to your email.</p>
+
+        <div class="otp-input-wrapper">
+          <input type="text" id="otp-input" maxlength="6" placeholder="------" autocomplete="one-time-code" inputmode="numeric" />
+        </div>
+
+        <button onclick="verifyOtp()">Verify</button>
+
+        <p style="margin-top: 22px; font-size: 0.94rem;">
+          Didn't receive the code? 
+          <a href="#" onclick="requestOtp(); return false;" style="color: #006400; text-decoration: none; font-weight: 500;">Resend</a>
+        </p>
+
+        <div id="otp-error" style="color: red; margin-top: 12px; display: none;"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    © 2026. All Rights Reserved. Federal Ministry of Youth Development
+  </footer>
+
+  <script src="script.js"></script>
+
+</body>
+</html>

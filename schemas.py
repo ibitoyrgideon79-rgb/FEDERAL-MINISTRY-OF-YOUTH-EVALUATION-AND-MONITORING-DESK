@@ -15,7 +15,7 @@ class UserOut(BaseModel):
     role: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ProgrammeOut(BaseModel):
     id: int
@@ -23,7 +23,7 @@ class ProgrammeOut(BaseModel):
     department: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class MonthlyReportCreate(BaseModel):
     programme_name: str
@@ -50,11 +50,11 @@ class MonthlyReportCreate(BaseModel):
 
 class MonthlyReportOut(MonthlyReportCreate):
     id: int
-    submitted_by: Optional[int]
+    submitted_by: Optional[str]
     created_at: Optional[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class DashboardResponse(BaseModel):
     total_youth_registered: int

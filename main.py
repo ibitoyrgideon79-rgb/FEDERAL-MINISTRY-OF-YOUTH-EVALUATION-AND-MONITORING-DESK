@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 import os
 from database import engine, Base, SessionLocal
@@ -10,10 +12,26 @@ load_dotenv()
 
 app = FastAPI(title="Digital Monitoring Tool API")
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount frontend folder at root (must be after routers)
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
+
 # include routers
 app.include_router(auth.router)
 app.include_router(programmes.router)
 app.include_router(reports.router)
+
+# Mount frontend folder at root (must be last)
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 # global exception handlers
 @app.exception_handler(HTTPException)
