@@ -1,0 +1,61 @@
+from fastapi import APIRouter, Depends, HTTPException, status, Cookie
+from sqlalchemy.orm import Session
+from database import get_db
+from schemas import MonthlyReportCreate, MonthlyReportOut, DashboardResponse
+from models import MonthlyReport, Session as DBSession, User
+from datetime import datetime
+
+router = APIRouter(prefix="/reports", tags=["reports"])
+
+# dependency to check session cookie and return user
+def get_current_user(session_token: str = Cookie(None), db: Session = Depends(get_db)) -> User:
+    if not session_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    sess = db.query(DBSession).filter(DBSession.token == session_token).first()
+    if not sess:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+    if sess.expires_at < datetime.utcnow():
+        db.delete(sess)
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired")
+    user = db.query(User).filter(User.id == sess.user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
+
+@router.post("/", response_model=MonthlyReportOut)
+def submit_report(payload: MonthlyReportCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # validate numeric fields are handled by Pydantic
+    report_data = payload.dict()
+    report_data["submitted_by"] = current_user.id
+    report = MonthlyReport(**report_data)
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+    return report
+
+@router.get("/", response_model=list[MonthlyReportOut])
+def list_reports(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role == "admin":
+        reports = db.query(MonthlyReport).order_by(MonthlyReport.created_at.desc()).all()
+    else:
+        reports = db.query(MonthlyReport).filter(MonthlyReport.submitted_by == current_user.id).order_by(MonthlyReport.created_at.desc()).all()
+    return reports
+
+@router.get("/dashboard", response_model=DashboardResponse)
+def dashboard(db: Session = Depends(get_db)):
+    reports = db.query(MonthlyReport).all()
+    total_registered = sum(r.total_youth_registered for r in reports)
+    total_trained = sum(r.youth_trained for r in reports)
+    total_funded = sum(r.youth_funded for r in reports)
+    total_outcomes = sum(r.youth_with_outcomes for r in reports)
+    total_reports = len(reports)
+    training_percentage = (total_trained / total_registered * 100) if total_registered > 0 else 0.0
+    return {
+        "total_youth_registered": total_registered,
+        "total_trained": total_trained,
+        "training_percentage": round(training_percentage, 2),
+        "total_youth_funded": total_funded,
+        "total_youth_with_outcomes": total_outcomes,
+        "total_reports": total_reports,
+    }
