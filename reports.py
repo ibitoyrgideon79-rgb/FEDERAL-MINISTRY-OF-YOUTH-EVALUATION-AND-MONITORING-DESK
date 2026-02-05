@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from schemas import MonthlyReportCreate, MonthlyReportOut, DashboardResponse
 from models import MonthlyReport, User
-from utils.auth_utils import get_current_user
+from utils.auth_utils import get_current_user, require_admin
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -68,7 +68,7 @@ def list_reports(current_user: User = Depends(get_current_user), db: Session = D
     return reports
 
 @router.get("/dashboard", response_model=DashboardResponse)
-def dashboard(db: Session = Depends(get_db)):
+def dashboard(db: Session = Depends(get_db), admin_user=Depends(require_admin)):
     reports = db.query(MonthlyReport).all()
     total_registered = sum(r.total_youth_registered for r in reports)
     total_trained = sum(r.youth_trained for r in reports)

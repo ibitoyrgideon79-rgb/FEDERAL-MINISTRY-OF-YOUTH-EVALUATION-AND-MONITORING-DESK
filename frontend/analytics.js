@@ -516,7 +516,52 @@ async function exportToExcel() {
 }
 
 async function exportToPDF() {
-  showError("PDF export feature coming soon. Please use Excel export for now.");
+  try {
+    const container = document.querySelector(".analytics-container");
+    if (!container) {
+      showError("Unable to export: analytics container not found.");
+      return;
+    }
+
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF || !window.html2canvas) {
+      showError("PDF libraries failed to load. Please refresh and try again.");
+      return;
+    }
+
+    const canvas = await window.html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "pt", "a4");
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    const filename = `DMT-Analytics-${new Date().toISOString().split("T")[0]}.pdf`;
+    pdf.save(filename);
+  } catch (err) {
+    console.error("Error exporting to PDF:", err);
+    showError("Failed to export PDF. Please try again.");
+  }
 }
 
 function showError(message) {

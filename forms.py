@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -18,6 +18,16 @@ from utils.form_tokens import (
 )
 
 router = APIRouter(prefix="/forms", tags=["forms"])
+
+
+def _utc_now():
+    return datetime.now(timezone.utc)
+
+
+def _is_expired(ts: datetime) -> bool:
+    if ts.tzinfo is None:
+        return ts < datetime.utcnow()
+    return ts < _utc_now()
 
 
 def _validate_token(programme_id: int, token: str, db: Session):
@@ -46,7 +56,7 @@ def _validate_token(programme_id: int, token: str, db: Session):
         token_row = db.query(FormToken).filter(FormToken.token_hash == hash_token(token)).first()
         if not token_row:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown token")
-        if token_row.expires_at < datetime.utcnow():
+        if _is_expired(token_row.expires_at):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token expired")
         if token_row.used:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token already used")

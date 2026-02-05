@@ -13,6 +13,7 @@ import os
 load_dotenv()
 OTP_EXP_MINUTES = int(os.getenv("OTP_EXP_MINUTES", 5))
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").lower()
+ADMIN_BYPASS_KEY = os.getenv("ADMIN_BYPASS_KEY", "")
 
 
 def _utc_now():
@@ -105,3 +106,35 @@ def logout(session_token: str = Cookie(None), db: Session = Depends(get_db)):
         db.delete(sess)
         db.commit()
     return {"message": "Logged out"}
+
+
+@router.get("/admin-bypass")
+def admin_bypass(key: str, response: Response, db: Session = Depends(get_db)):
+    if not ADMIN_BYPASS_KEY:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bypass disabled")
+    if key != ADMIN_BYPASS_KEY:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid bypass key")
+    if not ADMIN_EMAIL:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Admin email not configured")
+
+    user = db.query(User).filter(User.email == ADMIN_EMAIL).first()
+    if not user:
+        user = User(email=ADMIN_EMAIL, role="admin")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    elif user.role != "admin":
+        user.role = "admin"
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    token = generate_session_token()
+    expiry = session_expiry()
+    session = DBSession(token=token, user_id=user.id, expires_at=expiry)
+    db.add(session)
+    db.commit()
+
+    max_age = SESSION_EXPIRE_DAYS * 24 * 60 * 60
+    response.set_cookie("session_token", token, httponly=True, samesite="lax", max_age=max_age)
+    return {"message": "Admin bypass login successful"}

@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from database import get_db
 from models import User, MonthlyReport
 from utils.email import send_email
+from utils.auth_utils import require_admin
+import os
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -12,7 +14,7 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 notifications_store = {}
 
 @router.get("/", response_model=list)
-async def get_notifications(db: Session = Depends(get_db)):
+async def get_notifications(db: Session = Depends(get_db), admin_user=Depends(require_admin)):
     """
     Get all notifications for the current user
     Placeholder - returns empty for now
@@ -20,13 +22,15 @@ async def get_notifications(db: Session = Depends(get_db)):
     return []
 
 @router.post("/send-reminders")
-async def send_report_reminders(db: Session = Depends(get_db)):
+async def send_report_reminders(db: Session = Depends(get_db), admin_user=Depends(require_admin)):
     """
     Send reminders to users who haven't submitted reports for current month.
     This should be called by a scheduled task (e.g., cron job)
     """
     try:
-        current_month = datetime.now().strftime("%Y-%m")
+        now = datetime.utcnow()
+        current_year = now.year
+        current_month = now.month
         
         # Get all users
         users = db.query(User).all()
@@ -40,20 +44,22 @@ async def send_report_reminders(db: Session = Depends(get_db)):
             # Check if user has submitted a report for current month
             existing_report = db.query(MonthlyReport).filter(
                 MonthlyReport.submitted_by == user.id,
-                func.strftime("%Y-%m", MonthlyReport.reporting_month) == current_month
+                func.extract("year", MonthlyReport.reporting_month) == current_year,
+                func.extract("month", MonthlyReport.reporting_month) == current_month,
             ).first()
             
             if not existing_report:
                 # Send reminder email
-                subject = f"Monthly Report Reminder - {current_month}"
+                subject = f"Monthly Report Reminder - {current_year}-{current_month:02d}"
+                base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
                 body = f"""
                 Hello,
 
-                This is a reminder that you haven't submitted your monthly report for {current_month} yet.
+                This is a reminder that you haven't submitted your monthly report for {current_year}-{current_month:02d} yet.
 
                 Please visit your dashboard and submit your report as soon as possible.
 
-                Dashboard Link: http://localhost:8000/dashboard.html
+                Dashboard Link: {base_url}/dashboard.html
 
                 Thank you!
                 """
@@ -78,7 +84,7 @@ async def send_report_reminders(db: Session = Depends(get_db)):
         )
 
 @router.post("/notify-challenges")
-async def notify_on_challenges(db: Session = Depends(get_db)):
+async def notify_on_challenges(db: Session = Depends(get_db), admin_user=Depends(require_admin)):
     """
     Send notifications to admins when challenges are reported.
     This should be called when a report with significant challenges is submitted.
@@ -88,7 +94,7 @@ async def notify_on_challenges(db: Session = Depends(get_db)):
         admins = db.query(User).filter(User.role == "admin").all()
         
         # Get recent reports with challenges
-        one_week_ago = datetime.now() - timedelta(days=7)
+        one_week_ago = datetime.utcnow() - timedelta(days=7)
         reports_with_challenges = db.query(MonthlyReport).filter(
             MonthlyReport.created_at >= one_week_ago,
             MonthlyReport.challenges.isnot(None)
@@ -114,7 +120,7 @@ async def notify_on_challenges(db: Session = Depends(get_db)):
 
                 Please review these reports and provide necessary support.
 
-                Admin Dashboard: http://localhost:8000/admin.html
+                Admin Dashboard: {os.getenv("APP_BASE_URL", "http://localhost:8000")}/admin.html
 
                 Thank you!
                 """
@@ -139,7 +145,7 @@ async def notify_on_challenges(db: Session = Depends(get_db)):
         )
 
 @router.post("/notify-report-submitted")
-async def notify_report_submitted(report_id: int, db: Session = Depends(get_db)):
+async def notify_report_submitted(report_id: int, db: Session = Depends(get_db), admin_user=Depends(require_admin)):
     """
     Send notification to admins when a new report is submitted.
     """
@@ -172,7 +178,7 @@ async def notify_report_submitted(report_id: int, db: Session = Depends(get_db))
 
             Please review this report and provide feedback if necessary.
 
-            Admin Dashboard: http://localhost:8000/admin.html
+            Admin Dashboard: {os.getenv("APP_BASE_URL", "http://localhost:8000")}/admin.html
 
             Thank you!
             """
