@@ -5,7 +5,7 @@ from database import get_db
 from models import OTP, User, Session as DBSession
 from utils.email import send_email
 from utils.security import generate_otp, generate_session_token, session_expiry, SESSION_EXPIRE_DAYS
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 import os
@@ -13,6 +13,17 @@ import os
 load_dotenv()
 OTP_EXP_MINUTES = int(os.getenv("OTP_EXP_MINUTES", 5))
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").lower()
+
+
+def _utc_now():
+    return datetime.now(timezone.utc)
+
+
+def _is_expired(ts: datetime) -> bool:
+    # Handle both naive and timezone-aware timestamps safely.
+    if ts.tzinfo is None:
+        return ts < datetime.utcnow()
+    return ts < _utc_now()
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -23,7 +34,7 @@ def request_otp(payload: OTPRequest, db: Session = Depends(get_db)):
     if payload.email.lower() != ADMIN_EMAIL:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access only")
     code = generate_otp()
-    expires = datetime.utcnow() + timedelta(minutes=OTP_EXP_MINUTES)
+    expires = _utc_now() + timedelta(minutes=OTP_EXP_MINUTES)
     otp = OTP(email=payload.email, code=code, expires_at=expires)
     db.add(otp)
     db.commit()
@@ -49,7 +60,7 @@ def verify_otp(payload: OTPVerify, response: Response, db: Session = Depends(get
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OTP")
     if otp_entry.used:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP already used")
-    if otp_entry.expires_at < datetime.utcnow():
+    if _is_expired(otp_entry.expires_at):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP expired")
 
     # mark as used and persist immediately to prevent reuse

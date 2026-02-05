@@ -1,8 +1,18 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, status, Cookie
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Session as DBSession, User
+
+
+def _utc_now():
+    return datetime.now(timezone.utc)
+
+
+def _is_expired(ts: datetime) -> bool:
+    if ts.tzinfo is None:
+        return ts < datetime.utcnow()
+    return ts < _utc_now()
 
 
 def get_current_user(session_token: str = Cookie(None), db: Session = Depends(get_db)) -> User:
@@ -11,7 +21,7 @@ def get_current_user(session_token: str = Cookie(None), db: Session = Depends(ge
     sess = db.query(DBSession).filter(DBSession.token == session_token).first()
     if not sess:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
-    if sess.expires_at < datetime.utcnow():
+    if _is_expired(sess.expires_at):
         db.delete(sess)
         db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired")
