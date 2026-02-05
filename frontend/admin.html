@@ -156,6 +156,15 @@
       border-left: 5px solid #c00;
     }
 
+    .success-message {
+      background: #d4edda;
+      color: #155724;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 5px solid #2e7d32;
+    }
+
     .submitted-by {
       font-size: 0.9rem;
       color: #666;
@@ -220,9 +229,22 @@
 
       <!-- All Programmes Section -->
       <div class="section">
-        <h2>Programmes</h2>
+        <h2>Programmes & Form Links</h2>
         <div id="programmes-container">
           <div class="loading">Loading programmes...</div>
+        </div>
+      </div>
+
+      <!-- Form Submissions Section -->
+      <div class="section">
+        <h2>Form Submissions</h2>
+        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+          <label for="form-submissions-filter" style="font-weight: 600;">Filter by Programme</label>
+          <select id="form-submissions-filter" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;"></select>
+          <button onclick="loadFormSubmissions()" style="background: #006400; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">Apply</button>
+        </div>
+        <div id="form-submissions-container">
+          <div class="loading">Loading submissions...</div>
         </div>
       </div>
     </div>

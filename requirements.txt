@@ -3,4 +3,5 @@ uvicorn[standard]
 SQLAlchemy==1.4.*
 python-dotenv
 pydantic[email]
-email-validatorpsycopg2-binary
+email-validator
+psycopg2-binary

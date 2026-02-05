@@ -21,6 +21,48 @@ class ProgrammeOut(BaseModel):
     id: int
     name: str
     department: str
+    description: Optional[str] = None
+    recipient_email: Optional[EmailStr] = None
+
+    class Config:
+        from_attributes = True
+
+class ProgrammeUpdate(BaseModel):
+    description: Optional[str] = None
+    recipient_email: EmailStr
+
+class FormLinkRequest(BaseModel):
+    programme_id: int = Field(..., ge=1)
+
+class PublicFormSubmission(BaseModel):
+    programme_name: str
+    focal_department: Optional[str]
+    focal_aide_hm: Optional[str]
+    focal_ministry_official: Optional[str]
+    reporting_month: date
+    programme_launch_date: Optional[date]
+    total_youth_registered: int = Field(..., ge=0)
+    youth_trained: int = Field(..., ge=0)
+    youth_funded: int = Field(..., ge=0)
+    youth_with_outcomes: int = Field(..., ge=0)
+    partnerships: Optional[str]
+    challenges: Optional[str]
+    mitigation_strategies: Optional[str]
+    scale_up_plans: Optional[str]
+    success_story: Optional[str]
+
+    @validator("youth_trained")
+    def check_trained_not_more_than_registered(cls, v, values):
+        if "total_youth_registered" in values and v > values["total_youth_registered"]:
+            raise ValueError("youth_trained cannot exceed total_youth_registered")
+        return v
+
+class FormSubmissionOut(BaseModel):
+    id: int
+    programme_id: Optional[int]
+    recipient_email: EmailStr
+    form_data: dict
+    submitted_at: Optional[str]
 
     class Config:
         from_attributes = True

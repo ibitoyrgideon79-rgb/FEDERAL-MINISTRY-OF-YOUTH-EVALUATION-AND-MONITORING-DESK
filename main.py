@@ -5,8 +5,9 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 import os
 from database import engine, Base, SessionLocal
+from utils.migrations import ensure_programme_columns
 from programmes import preload_programmes
-import auth, programmes, reports, notifications
+import auth, programmes, reports, notifications, forms
 
 load_dotenv()
 
@@ -26,6 +27,7 @@ app.include_router(auth.router)
 app.include_router(programmes.router)
 app.include_router(reports.router)
 app.include_router(notifications.router)
+app.include_router(forms.router)
 
 # Mount frontend folder at root (must be last)
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
@@ -44,6 +46,9 @@ def generic_exception_handler(request: Request, exc: Exception):
 def on_startup():
     # create DB and tables
     Base.metadata.create_all(bind=engine)
+    # ensure backward-compatible programme columns exist
+    database_url = os.getenv("DATABASE_URL", "sqlite:///./dmt.db")
+    ensure_programme_columns(engine, database_url.startswith("sqlite"))
     # preload sample programmes
     db = SessionLocal()
     try:

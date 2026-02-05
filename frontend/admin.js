@@ -1,4 +1,5 @@
 const API_BASE = window.location.origin; // Use same origin as frontend
+let programmesCache = [];
 
 async function loadAdminDashboard() {
   try {
@@ -8,6 +9,8 @@ async function loadAdminDashboard() {
     await loadAllReports();
     // Load programmes
     await loadProgrammes();
+    // Load form submissions
+    await loadFormSubmissions();
   } catch (err) {
     console.error("Error loading admin dashboard:", err);
     showError("Failed to load admin dashboard. Please refresh the page.");
@@ -125,16 +128,22 @@ async function loadAllReports() {
 
 async function loadProgrammes() {
   try {
-    const response = await fetch(`${API_BASE}/programmes/`, {
-      method: "GET",
-      credentials: "include",
-    });
+    const [programmesResponse, summaryResponse] = await Promise.all([
+      fetch(`${API_BASE}/programmes/`, { method: "GET", credentials: "include" }),
+      fetch(`${API_BASE}/forms/admin/summary`, { method: "GET", credentials: "include" }),
+    ]);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (!programmesResponse.ok) {
+      throw new Error(`HTTP error! status: ${programmesResponse.status}`);
+    }
+    if (!summaryResponse.ok) {
+      throw new Error(`HTTP error! status: ${summaryResponse.status}`);
     }
 
-    const programmes = await response.json();
+    const programmes = await programmesResponse.json();
+    const summary = await summaryResponse.json();
+    programmesCache = programmes;
+    const summaryMap = new Map(summary.map((s) => [s.programme_id, s]));
     const container = document.getElementById("programmes-container");
 
     if (programmes.length === 0) {
@@ -142,11 +151,31 @@ async function loadProgrammes() {
       return;
     }
 
+    populateFormFilter(programmes);
+
     const rows = programmes.map((p) => `
+      ${(() => {
+        const stats = summaryMap.get(p.id) || { submission_count: 0, last_submitted_at: null };
+        const lastSubmitted = stats.last_submitted_at ? new Date(stats.last_submitted_at).toLocaleString() : "N/A";
+        return `
       <tr>
         <td><strong>${p.name}</strong></td>
         <td>${p.department || "Unspecified"}</td>
+        <td>
+          <input type="text" id="desc-${p.id}" value="${p.description || ""}" placeholder="Description" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;" />
+        </td>
+        <td>
+          <input type="email" id="email-${p.id}" value="${p.recipient_email || ""}" placeholder="Recipient email" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;" />
+        </td>
+        <td>${stats.submission_count || 0}</td>
+        <td>${lastSubmitted}</td>
+        <td style="white-space: nowrap;">
+          <button onclick="saveProgramme(${p.id})" style="background: #006400; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-right: 6px;">Save</button>
+          <button onclick="sendFormLink(${p.id})" style="background: #004d00; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">Send Link</button>
+        </td>
       </tr>
+        `;
+      })()}
     `).join("");
 
     container.innerHTML = `
@@ -155,6 +184,11 @@ async function loadProgrammes() {
           <tr>
             <th>Programme Name</th>
             <th>Department</th>
+            <th>Description</th>
+            <th>Recipient Email</th>
+            <th>Submission Count</th>
+            <th>Last Submitted</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -168,9 +202,126 @@ async function loadProgrammes() {
   }
 }
 
+function populateFormFilter(programmes) {
+  const select = document.getElementById("form-submissions-filter");
+  if (!select) return;
+
+  select.innerHTML = `<option value="">All Programmes</option>` + programmes.map((p) => `
+    <option value="${p.id}">${p.name}</option>
+  `).join("");
+}
+
+async function saveProgramme(programmeId) {
+  const description = document.getElementById(`desc-${programmeId}`)?.value || "";
+  const recipientEmail = document.getElementById(`email-${programmeId}`)?.value || "";
+
+  if (!recipientEmail) {
+    showError("Recipient email is required.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/programmes/${programmeId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ description, recipient_email: recipientEmail }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.detail || "Failed to update programme");
+    }
+
+    showMessage("Programme updated successfully.");
+    await loadProgrammes();
+  } catch (err) {
+    console.error("Error updating programme:", err);
+    showError(err.message || "Failed to update programme.");
+  }
+}
+
+async function sendFormLink(programmeId) {
+  try {
+    const response = await fetch(`${API_BASE}/forms/admin/send-link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ programme_id: programmeId }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.detail || "Failed to send form link");
+    }
+
+    showMessage("Form link sent successfully.");
+  } catch (err) {
+    console.error("Error sending form link:", err);
+    showError(err.message || "Failed to send form link.");
+  }
+}
+
+async function loadFormSubmissions() {
+  try {
+    const programmeId = document.getElementById("form-submissions-filter")?.value || "";
+    const query = programmeId ? `?programme_id=${encodeURIComponent(programmeId)}` : "";
+    const response = await fetch(`${API_BASE}/forms/admin/submissions${query}`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const submissions = await response.json();
+    const container = document.getElementById("form-submissions-container");
+
+    if (submissions.length === 0) {
+      container.innerHTML = "<div class='no-data'>No form submissions yet.</div>";
+      return;
+    }
+
+    const programmeMap = new Map(programmesCache.map((p) => [p.id, p.name]));
+    const rows = submissions.map((s) => `
+      <tr>
+        <td>${programmeMap.get(s.programme_id) || s.programme_id || "N/A"}</td>
+        <td>${s.recipient_email}</td>
+        <td>${s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "N/A"}</td>
+        <td><pre style="white-space: pre-wrap; max-width: 420px;">${JSON.stringify(s.form_data, null, 2)}</pre></td>
+      </tr>
+    `).join("");
+
+    container.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Programme</th>
+            <th>Recipient Email</th>
+            <th>Submitted At</th>
+            <th>Form Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    `;
+  } catch (err) {
+    console.error("Error loading form submissions:", err);
+    showError("Failed to load form submissions.");
+  }
+}
+
 function showError(message) {
   const container = document.getElementById("error-container");
   container.innerHTML = `<div class="error-message">${message}</div>`;
+}
+
+function showMessage(message) {
+  const container = document.getElementById("error-container");
+  container.innerHTML = `<div class="success-message" style="display:block;">${message}</div>`;
 }
 
 async function logout() {

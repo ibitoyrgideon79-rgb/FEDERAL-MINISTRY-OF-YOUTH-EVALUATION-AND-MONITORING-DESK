@@ -1,6 +1,5 @@
 const API_BASE = window.location.origin; // Use same origin as frontend
 let currentEmail = "";
-const ADMIN_EMAIL = "ibitoyrgideon79@gmail.com";
 
 function showEmailBox() {
   const emailBox = document.getElementById("email-box");
@@ -132,11 +131,14 @@ async function verifyOtp() {
 
     console.log("Login successful:", userData);
 
-    // Redirect based on role
-    if (userData.role === "admin" || userData.email === ADMIN_EMAIL) {
+    // Redirect only admins
+    if (userData.role === "admin") {
       window.location.href = "/admin.html";
     } else {
-      window.location.href = "/dashboard.html";
+      if (otpError) {
+        otpError.textContent = "Admin access only.";
+        otpError.style.display = "block";
+      }
     }
   } catch (err) {
     console.error("Error verifying OTP:", err);

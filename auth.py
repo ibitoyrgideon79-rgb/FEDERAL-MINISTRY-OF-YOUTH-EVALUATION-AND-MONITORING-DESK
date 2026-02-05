@@ -18,6 +18,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/request-otp")
 def request_otp(payload: OTPRequest, db: Session = Depends(get_db)):
+    if not ADMIN_EMAIL:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Admin email not configured")
+    if payload.email.lower() != ADMIN_EMAIL:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access only")
     code = generate_otp()
     expires = datetime.utcnow() + timedelta(minutes=OTP_EXP_MINUTES)
     otp = OTP(email=payload.email, code=code, expires_at=expires)
@@ -35,6 +39,10 @@ def request_otp(payload: OTPRequest, db: Session = Depends(get_db)):
 
 @router.post("/verify-otp", response_model=UserOut)
 def verify_otp(payload: OTPVerify, response: Response, db: Session = Depends(get_db)):
+    if not ADMIN_EMAIL:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Admin email not configured")
+    if payload.email.lower() != ADMIN_EMAIL:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access only")
     # Fetch the OTP entry for this email with matching code that is not used and not expired
     otp_entry = db.query(OTP).filter(OTP.email == payload.email, OTP.code == payload.code).order_by(OTP.created_at.desc()).first()
     if not otp_entry:
@@ -52,14 +60,13 @@ def verify_otp(payload: OTPVerify, response: Response, db: Session = Depends(get
     # get or create user
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
-        role = "admin" if ADMIN_EMAIL and payload.email.lower() == ADMIN_EMAIL else "user"
-        user = User(email=payload.email, role=role)
+        user = User(email=payload.email, role="admin")
         db.add(user)
         db.commit()
         db.refresh(user)
     else:
         # ensure admin role if email matches configured ADMIN_EMAIL
-        if ADMIN_EMAIL and user.email.lower() == ADMIN_EMAIL and user.role != "admin":
+        if user.email.lower() == ADMIN_EMAIL and user.role != "admin":
             user.role = "admin"
             db.add(user)
             db.commit()

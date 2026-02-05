@@ -33,6 +33,8 @@ class Programme(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
     department = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    recipient_email = Column(String, nullable=True, index=True)
 
 class MonthlyReport(Base):
     __tablename__ = "monthly_reports"
@@ -55,3 +57,21 @@ class MonthlyReport(Base):
     scale_up_plans = Column(Text, nullable=True)
     success_story = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class FormToken(Base):
+    __tablename__ = "form_tokens"
+    id = Column(Integer, primary_key=True, index=True)
+    token_hash = Column(String, unique=True, index=True, nullable=False)
+    programme_id = Column(Integer, ForeignKey("programmes.id", ondelete="CASCADE"), nullable=False)
+    recipient_email = Column(String, index=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class FormSubmission(Base):
+    __tablename__ = "form_submissions"
+    id = Column(Integer, primary_key=True, index=True)
+    programme_id = Column(Integer, ForeignKey("programmes.id", ondelete="SET NULL"), nullable=True)
+    recipient_email = Column(String, index=True, nullable=False)
+    form_data = Column(Text, nullable=False)
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now())
