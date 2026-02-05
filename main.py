@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import os
 from database import engine, Base, SessionLocal
 from programmes import preload_programmes
-import auth, programmes, reports
+import auth, programmes, reports, notifications
 
 load_dotenv()
 
@@ -21,14 +21,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount frontend folder at root (must be after routers)
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
-
-
-# include routers
+# include routers FIRST (must be before StaticFiles mount)
 app.include_router(auth.router)
 app.include_router(programmes.router)
 app.include_router(reports.router)
+app.include_router(notifications.router)
 
 # Mount frontend folder at root (must be last)
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

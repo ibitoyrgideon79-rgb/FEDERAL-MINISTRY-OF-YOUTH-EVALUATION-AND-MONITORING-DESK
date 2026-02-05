@@ -25,14 +25,55 @@ def get_current_user(session_token: str = Cookie(None), db: Session = Depends(ge
 
 @router.post("/", response_model=MonthlyReportOut)
 def submit_report(payload: MonthlyReportCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # validate numeric fields are handled by Pydantic
-    report_data = payload.dict()
-    report_data["submitted_by"] = current_user.id
-    report = MonthlyReport(**report_data)
-    db.add(report)
-    db.commit()
-    db.refresh(report)
-    return report
+    try:
+        # validate numeric fields are handled by Pydantic
+        report_data = payload.dict()
+        report_data["submitted_by"] = current_user.id
+        report = MonthlyReport(**report_data)
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        
+        # Trigger notification to admins (non-blocking, can be async in production)
+        # Wrap in separate try-catch so errors don't prevent report submission
+        try:
+            from utils.email import send_email
+            try:
+                admins = db.query(User).filter(User.role == "admin").all()
+                if admins:
+                    for admin in admins:
+                        subject = f"New Report Submitted: {report.programme_name}"
+                        body = f"""Hello Admin,
+
+A new monthly report has been submitted:
+
+Programme: {report.programme_name}
+Department: {report.focal_department}
+Month: {report.reporting_month}
+Youth Registered: {report.total_youth_registered}
+Youth Trained: {report.youth_trained}
+
+Please review this report and provide feedback if necessary.
+
+Admin Dashboard: http://localhost:8000/admin.html
+
+Thank you!"""
+                        try:
+                            send_email(admin.email, subject, body)
+                        except Exception as e:
+                            print(f"Failed to send notification to admin {admin.email}: {e}")
+            except Exception as e:
+                print(f"Error querying admins: {e}")
+        except Exception as e:
+            print(f"Error in notification process: {e}")
+        
+        return report
+    except Exception as e:
+        print(f"Error submitting report: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit report: {str(e)}"
+        )
 
 @router.get("/", response_model=list[MonthlyReportOut])
 def list_reports(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

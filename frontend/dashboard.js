@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000";
+const API_BASE = window.location.origin; // Use same origin as frontend
 
 async function loadDashboard() {
   // Check if user is authenticated (session cookie exists)
@@ -82,8 +82,13 @@ async function loadProgrammes() {
 
     const list = programmes.map((p) => `
       <li>
-        <span class="programme-name">${p.name}</span>
-        <span class="programme-dept">${p.department}</span>
+        <a href="/report-form.html?programme=${encodeURIComponent(p.name)}" style="text-decoration: none; color: inherit; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div>
+            <span class="programme-name">${p.name}</span>
+            <span class="programme-dept">${p.department}</span>
+          </div>
+          <span style="color: #006400; font-weight: bold; margin-left: 10px;">→ Submit Report</span>
+        </a>
       </li>
     `).join("");
 

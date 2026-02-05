@@ -214,7 +214,10 @@
     <div class="dashboard-container">
       <div class="dashboard-header">
         <h1>Dashboard</h1>
-        <button class="logout-btn" onclick="logout()">LOGOUT</button>
+        <div style="display: flex; gap: 10px;">
+          <a href="/analytics.html" style="background-color: #006400; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: 500; display: inline-block;">📊 Analytics</a>
+          <button class="logout-btn" onclick="logout()">LOGOUT</button>
+        </div>
       </div>
 
       <div id="error-container"></div>

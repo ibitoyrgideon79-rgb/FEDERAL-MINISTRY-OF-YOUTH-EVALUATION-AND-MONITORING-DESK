@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000";
+const API_BASE = window.location.origin; // Use same origin as frontend
 let currentEmail = "";
 const ADMIN_EMAIL = "ibitoyrgideon79@gmail.com";
 
@@ -87,35 +87,61 @@ async function verifyOtp() {
   }
 
   try {
+    const payload = { email: currentEmail, code: otp };
+    console.log("Sending verify request with payload:", payload);
+
     const response = await fetch(`${API_BASE}/auth/verify-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email: currentEmail, code: otp }),
+      body: JSON.stringify(payload),
     });
 
+    console.log("Response status:", response.status);
+    console.log("Response ok:", response.ok);
+
+    const responseText = await response.text();
+    console.log("Response text:", responseText);
+
     if (!response.ok) {
-      const data = await response.json();
+      let errorDetail = "Invalid or expired OTP. Please try again.";
+      try {
+        const errorData = JSON.parse(responseText);
+        errorDetail = errorData.detail || errorDetail;
+      } catch (e) {
+        errorDetail = responseText || "Server error";
+      }
       if (otpError) {
-        otpError.textContent = data.detail || "Invalid or expired OTP. Please try again.";
+        otpError.textContent = errorDetail;
         otpError.style.display = "block";
       }
       return;
     }
 
-    const userData = await response.json();
+    let userData;
+    try {
+      userData = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Could not parse response JSON:", e);
+      if (otpError) {
+        otpError.textContent = "Invalid server response: " + responseText;
+        otpError.style.display = "block";
+      }
+      return;
+    }
+
     console.log("Login successful:", userData);
 
     // Redirect based on role
     if (userData.role === "admin" || userData.email === ADMIN_EMAIL) {
-      window.location.href = "/admin";
+      window.location.href = "/admin.html";
     } else {
-      window.location.href = "/dashboard";
+      window.location.href = "/dashboard.html";
     }
   } catch (err) {
     console.error("Error verifying OTP:", err);
     if (otpError) {
-      otpError.textContent = "Network error. Please try again.";
+      otpError.textContent = "Network error: " + err.message;
       otpError.style.display = "block";
     }
   }

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Monthly Monitoring Report Form</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    main {
+      background-color: #f5f5f5;
+      min-height: 100vh;
+      padding: 40px 15px;
+    }
+
+    .form-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+    }
+
+    .form-header-content {
+      text-align: center;
+      flex: 1;
+    }
+
+    .form-header h1 {
+      color: #006400;
+      margin: 0 0 10px 0;
+      font-size: 2rem;
+    }
+
+    .form-header p {
+      color: #666;
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .back-btn {
+      background-color: #6c757d;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+      display: inline-block;
+      transition: background-color 0.3s;
+    }
+
+    .back-btn:hover {
+      background-color: #5a6268;
+    }
+
+    .form-section {
+      margin-bottom: 35px;
+    }
+
+    .form-section h2 {
+      color: #006400;
+      font-size: 1.3rem;
+      border-bottom: 2px solid #006400;
+      padding-bottom: 10px;
+      margin: 0 0 20px 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+      font-size: 0.95rem;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #006400;
+      box-shadow: 0 0 8px rgba(0, 100, 0, 0.2);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .form-group-full {
+      grid-column: 1 / -1;
+    }
+
+    .checkbox-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: auto;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+
+    .checkbox-item label {
+      margin: 0;
+      font-weight: normal;
+      cursor: pointer;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 40px;
+    }
+
+    .btn {
+      padding: 14px 40px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+    }
+
+    .btn-submit {
+      background: #006400;
+      color: white;
+    }
+
+    .btn-submit:hover {
+      background: #004d00;
+      transform: translateY(-2px);
+    }
+
+    .btn-cancel {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .btn-cancel:hover {
+      background: #d0d0d0;
+    }
+
+    .success-message {
+      background: #d4edda;
+      color: #155724;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #c3e6cb;
+      display: none;
+    }
+
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #f5c6cb;
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .form-container {
+        padding: 20px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .checkbox-group {
+        grid-template-columns: 1fr;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <img src="FMYD (2).png" alt="Federal Ministry of Youth Development Logo">
+    </div>
+  </header>
+
+  <main>
+    <div class="form-container">
+      <div class="form-header">
+        <div class="form-header-content">
+          <h1>📋 Monthly Monitoring Report</h1>
+          <p>Submit your programme's monthly report for monitoring and evaluation</p>
+        </div>
+        <button type="button" class="back-btn" onclick="goBack()">← Back</button>
+      </div>
+
+      <div id="success-message" class="success-message">Report submitted successfully!</div>
+      <div id="error-message" class="error-message"></div>
+
+      <form id="monitoring-form">
+
+        <!-- Programme Information -->
+        <div class="form-section">
+          <h2>Programme Information</h2>
+          <div class="form-row">
+            <div class="form-group form-group-full">
+              <label for="programme_name">Programme Name *</label>
+              <select id="programme_name" name="programme_name" required>
+                <option value="">-- Select a Programme --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="focal_department">Focal Department</label>
+              <input type="text" id="focal_department" name="focal_department" />
+            </div>
+            <div class="form-group">
+              <label for="focal_aide_hm">Focal Aide of HM</label>
+              <input type="text" id="focal_aide_hm" name="focal_aide_hm" />
+            </div>
+            <div class="form-group">
+              <label for="focal_ministry_official">Focal Ministry Official</label>
+              <input type="text" id="focal_ministry_official" name="focal_ministry_official" />
+            </div>
+            <div class="form-group">
+              <label for="reporting_month">Reporting Month *</label>
+              <input type="month" id="reporting_month" name="reporting_month" required />
+            </div>
+            <div class="form-group">
+              <label for="programme_launch_date">Programme Launch Date</label>
+              <input type="date" id="programme_launch_date" name="programme_launch_date" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Youth Metrics -->
+        <div class="form-section">
+          <h2>Youth Metrics</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="total_youth_registered">Total Youth Registered *</label>
+              <input type="number" id="total_youth_registered" name="total_youth_registered" min="0" required />
+            </div>
+            <div class="form-group">
+              <label for="youth_trained">Youth Trained This Month *</label>
+              <input type="number" id="youth_trained" name="youth_trained" min="0" required />
+            </div>
+            <div class="form-group">
+              <label for="youth_funded">Youth Provided With Start-Up Funds *</label>
+              <input type="number" id="youth_funded" name="youth_funded" min="0" required />
+            </div>
+            <div class="form-group">
+              <label for="youth_with_outcomes">Youth With Post-Training Outcomes *</label>
+              <input type="number" id="youth_with_outcomes" name="youth_with_outcomes" min="0" required />
+            </div>
+          </div>
+        </div>
+
+        <!-- Partnerships -->
+        <div class="form-section">
+          <h2>Established Partnerships</h2>
+          <div class="form-group">
+            <label>Partnership Types (select all that apply)</label>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input type="checkbox" id="partner_private" name="partner_type" value="Private Sector" />
+                <label for="partner_private">Private Sector</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="partner_ngo" name="partner_type" value="NGOs / CBOs" />
+                <label for="partner_ngo">NGOs / CBOs</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="partner_govt" name="partner_type" value="Government Agencies" />
+                <label for="partner_govt">Government Agencies</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="partner_dev" name="partner_type" value="Development Partners" />
+                <label for="partner_dev">Development Partners</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="partner_academic" name="partner_type" value="Academic / Training" />
+                <label for="partner_academic">Academic / Training</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="partnerships">Description of Partnerships</label>
+            <textarea id="partnerships" name="partnerships" placeholder="Describe the partnerships established..."></textarea>
+          </div>
+        </div>
+
+        <!-- Challenges & Mitigation -->
+        <div class="form-section">
+          <h2>Challenges & Mitigation</h2>
+          <div class="form-group">
+            <label for="challenges">Key Challenges Identified *</label>
+            <textarea id="challenges" name="challenges" placeholder="Describe operational, financial, logistical, or policy-related challenges..." required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="mitigation_strategies">Mitigation Strategies / Recommendations *</label>
+            <textarea id="mitigation_strategies" name="mitigation_strategies" placeholder="Proposed actions to address the challenges..." required></textarea>
+          </div>
+        </div>
+
+        <!-- Scale-Up Plans -->
+        <div class="form-section">
+          <h2>Programme Growth</h2>
+          <div class="form-group">
+            <label for="scale_up_plans">Scale-Up Plans *</label>
+            <textarea id="scale_up_plans" name="scale_up_plans" placeholder="Planned growth, expansion, or next phases..." required></textarea>
+          </div>
+        </div>
+
+        <!-- Success Stories -->
+        <div class="form-section">
+          <h2>Success Stories & Outcomes</h2>
+          <div class="form-group">
+            <label for="success_story">Success Story / Case Study *</label>
+            <textarea id="success_story" name="success_story" placeholder="Share key achievements, measurable outcomes, or inspiring stories..." required></textarea>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button type="submit" class="btn btn-submit">Submit Report</button>
+          <button type="button" class="btn btn-cancel" onclick="goBack()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <footer>
+    © 2026. All Rights Reserved. Federal Ministry of Youth Development
+  </footer>
+
+  <script src="report-form.js"></script>
+
+</body>
+</html>

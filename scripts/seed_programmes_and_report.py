@@ -16,21 +16,21 @@ from datetime import date
 import sys
 
 PROGRAMMES = [
-    "NIYA",
-    "Green House Initiatives with State Government",
-    "Nig Help Desk",
-    "National Youth Confab",
-    "NYSC Reform Committee",
-    "Youth Data Protection",
-    "Waste to Wealth / Recycling Training",
-    "Bambo Initiative",
-    "SMEDAN Partnership / Youth Start Up",
-    "Security and Exchange Commission MOU",
-    "Financial Literacy and Wealth Creation Training",
-    "Yo Health",
-    "Bank of Industry Training for NIYA",
-    "Youth Credit Initiative",
-    "Nigerian Youth Investment Fund",
+    ("NIYA", "Flagship"),
+    ("Green House Initiatives with State Government", "Flagship"),
+    ("Nig Help Desk", "Flagship"),
+    ("National Youth Confab", "Flagship"),
+    ("NYSC Reform Committee", "Flagship"),
+    ("Youth Data Protection", "Flagship"),
+    ("Waste to Wealth / Recycling Training", "Flagship"),
+    ("Bambo Initiative", "Flagship"),
+    ("SMEDAN Partnership / Youth Start Up", "Flagship"),
+    ("Security and Exchange Commission MOU", "Flagship"),
+    ("Financial Literacy and Wealth Creation Training", "Flagship"),
+    ("Yo Health", "Flagship"),
+    ("Bank of Industry Training for NIYA", "Flagship"),
+    ("Youth Credit Initiative", "Flagship"),
+    ("Nigerian Youth Investment Fund", "Flagship"),
 ]
 
 SAMPLE_REPORT = {
@@ -56,16 +56,16 @@ def seed():
     db = SessionLocal()
     try:
         print("Seeding programmes...")
-        for name in PROGRAMMES:
+        for name, dept in PROGRAMMES:
             existing = db.query(Programme).filter(Programme.name == name).first()
             if existing:
                 print(f"- Programme already exists: {name}")
             else:
-                p = Programme(name=name, department="Unspecified")
+                p = Programme(name=name, department=dept)
                 db.add(p)
                 db.commit()
                 db.refresh(p)
-                print(f"+ Added programme: {p.name}")
+                print(f"+ Added programme: {p.name} ({dept})")
 
         # Submit sample report if not present
         pm_name = SAMPLE_REPORT["programme_name"]
