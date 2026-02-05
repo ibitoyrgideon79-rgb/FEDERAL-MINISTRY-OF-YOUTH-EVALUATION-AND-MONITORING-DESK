@@ -16,6 +16,11 @@
       color: #333;
     }
 
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
     header {
       background-color: #ffffff;
       padding: 25px 15px;
@@ -232,12 +237,14 @@
 
     @media (max-width: 480px) {
       main {
-        padding: 30px 12px;
+        padding: 24px 12px;
+        align-items: flex-start;
       }
 
       .content-card {
         padding: 40px 20px;
         max-width: 100%;
+        margin-top: 6px;
       }
 
       .section-fme h1 {
