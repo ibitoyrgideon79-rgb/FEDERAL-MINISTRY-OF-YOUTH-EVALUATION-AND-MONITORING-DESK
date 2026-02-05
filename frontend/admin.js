@@ -1,6 +1,10 @@
 const API_BASE = window.location.origin; // Use same origin as frontend
 let programmesCache = [];
 
+function isMobileView() {
+  return window.matchMedia("(max-width: 768px)").matches;
+}
+
 async function loadAdminDashboard() {
   try {
     // Load stats
@@ -86,6 +90,24 @@ async function loadAllReports() {
       return;
     }
 
+    if (isMobileView()) {
+      const cards = reports.map((r) => `
+        <div class="admin-card">
+          <h4>${r.programme_name}</h4>
+          <div class="admin-field"><label>Reporting Month</label>${r.reporting_month || "N/A"}</div>
+          <div class="admin-field"><label>Total Registered</label>${r.total_youth_registered || 0}</div>
+          <div class="admin-field"><label>Trained</label>${r.youth_trained || 0}</div>
+          <div class="admin-field"><label>Funded</label>${r.youth_funded || 0}</div>
+          <div class="admin-field"><label>Outcomes</label>${r.youth_with_outcomes || 0}</div>
+          <div class="admin-field"><label>Department</label>${r.focal_department || "N/A"}</div>
+          <div class="admin-field"><label>Challenges</label>${r.challenges ? r.challenges.substring(0, 80) + "..." : "N/A"}</div>
+          <div class="admin-field"><label>Submitted Date</label>${r.created_at ? new Date(r.created_at).toLocaleDateString() : "N/A"}</div>
+        </div>
+      `).join("");
+      container.innerHTML = `<div class="admin-cards">${cards}</div>`;
+      return;
+    }
+
     const rows = reports.map((r) => `
       <tr>
         <td><strong>${r.programme_name}</strong></td>
@@ -152,6 +174,35 @@ async function loadProgrammes() {
     }
 
     populateFormFilter(programmes);
+
+    if (isMobileView()) {
+      const cards = programmes.map((p) => {
+        const stats = summaryMap.get(p.id) || { submission_count: 0, last_submitted_at: null };
+        const lastSubmitted = stats.last_submitted_at ? new Date(stats.last_submitted_at).toLocaleString() : "N/A";
+        return `
+          <div class="admin-card">
+            <h4>${p.name}</h4>
+            <div class="admin-field"><label>Department</label>${p.department || "Unspecified"}</div>
+            <div class="admin-field">
+              <label>Description</label>
+              <input type="text" id="desc-${p.id}" value="${p.description || ""}" placeholder="Description" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;" />
+            </div>
+            <div class="admin-field">
+              <label>Recipient Email</label>
+              <input type="email" id="email-${p.id}" value="${p.recipient_email || ""}" placeholder="Recipient email" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;" />
+            </div>
+            <div class="admin-field"><label>Submission Count</label>${stats.submission_count || 0}</div>
+            <div class="admin-field"><label>Last Submitted</label>${lastSubmitted}</div>
+            <div class="admin-actions">
+              <button onclick="saveProgramme(${p.id})" style="background: #006400; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">Save</button>
+              <button onclick="sendFormLink(${p.id})" style="background: #004d00; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">Send Link</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+      container.innerHTML = `<div class="admin-cards">${cards}</div>`;
+      return;
+    }
 
     const rows = programmes.map((p) => `
       ${(() => {
@@ -280,6 +331,19 @@ async function loadFormSubmissions() {
 
     if (submissions.length === 0) {
       container.innerHTML = "<div class='no-data'>No form submissions yet.</div>";
+      return;
+    }
+
+    if (isMobileView()) {
+      const cards = submissions.map((s) => `
+        <div class="admin-card">
+          <h4>${programmeMap.get(s.programme_id) || s.programme_id || "N/A"}</h4>
+          <div class="admin-field"><label>Recipient Email</label>${s.recipient_email}</div>
+          <div class="admin-field"><label>Submitted At</label>${s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "N/A"}</div>
+          <div class="admin-field"><label>Form Data</label><pre style="white-space: pre-wrap; margin: 0;">${JSON.stringify(s.form_data, null, 2)}</pre></div>
+        </div>
+      `).join("");
+      container.innerHTML = `<div class="admin-cards">${cards}</div>`;
       return;
     }
 
