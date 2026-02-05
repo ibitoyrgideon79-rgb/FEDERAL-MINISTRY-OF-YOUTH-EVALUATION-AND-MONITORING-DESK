@@ -15,6 +15,9 @@
     .admin-container {
       max-width: 1200px;
       margin: 0 auto;
+      width: 100%;
+      padding: 0 10px;
+      box-sizing: border-box;
       color: #333;
     }
 
@@ -140,6 +143,8 @@
       display: grid;
       grid-template-columns: 1fr;
       gap: 14px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .admin-card {
@@ -148,6 +153,8 @@
       padding: 14px;
       background: #fff;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .admin-card h4 {
@@ -239,6 +246,10 @@
       .admin-table th,
       .admin-table td {
         padding: 10px 8px;
+      }
+
+      .admin-actions button {
+        width: 100%;
       }
     }
   </style>
