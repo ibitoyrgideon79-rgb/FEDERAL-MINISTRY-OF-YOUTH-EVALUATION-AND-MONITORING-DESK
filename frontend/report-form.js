@@ -96,7 +96,7 @@ async function handleFormSubmit(e) {
 
     // Redirect to dashboard after 2 seconds
     setTimeout(() => {
-      window.location.href = "/dashboard.html";
+      window.location.href = "/admin.html";
     }, 2000);
   } catch (err) {
     console.error("Error submitting report:", err);
