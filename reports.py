@@ -42,10 +42,9 @@ Please review this report and provide feedback if necessary.
 Admin Dashboard: http://localhost:8000/admin.html
 
 Thank you!"""
-                        try:
-                            send_email(admin.email, subject, body)
-                        except Exception as e:
-                            print(f"Failed to send notification to admin {admin.email}: {e}")
+                        sent, error = send_email(admin.email, subject, body)
+                        if not sent:
+                            print(f"Failed to send notification to admin {admin.email}: {error}")
             except Exception as e:
                 print(f"Error querying admins: {e}")
         except Exception as e:

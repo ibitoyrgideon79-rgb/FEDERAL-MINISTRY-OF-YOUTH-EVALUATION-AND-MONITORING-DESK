@@ -43,9 +43,10 @@ def request_otp(payload: OTPRequest, db: Session = Depends(get_db)):
 
     subject = "Your login OTP"
     body = f"Your OTP is {code}. It expires in {OTP_EXP_MINUTES} minutes."
-    sent = send_email(payload.email, subject, body)
+    sent, error = send_email(payload.email, subject, body)
     if not sent:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to send OTP email")
+        detail = f"Failed to send OTP email: {error}" if error else "Failed to send OTP email"
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail)
 
     return {"message": "OTP sent"}
 

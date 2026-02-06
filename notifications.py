@@ -64,11 +64,11 @@ async def send_report_reminders(db: Session = Depends(get_db), admin_user=Depend
                 Thank you!
                 """
                 
-                try:
-                    send_email(user.email, subject, body)
+                sent, error = send_email(user.email, subject, body)
+                if sent:
                     reminders_sent += 1
-                except Exception as e:
-                    print(f"Failed to send reminder to {user.email}: {e}")
+                else:
+                    print(f"Failed to send reminder to {user.email}: {error}")
         
         return {
             "status": "success",
@@ -125,11 +125,11 @@ async def notify_on_challenges(db: Session = Depends(get_db), admin_user=Depends
                 Thank you!
                 """
                 
-                try:
-                    send_email(admin.email, subject, body)
+                sent, error = send_email(admin.email, subject, body)
+                if sent:
                     notifications_sent += 1
-                except Exception as e:
-                    print(f"Failed to send notification to {admin.email}: {e}")
+                else:
+                    print(f"Failed to send notification to {admin.email}: {error}")
         
         return {
             "status": "success",
@@ -183,11 +183,11 @@ async def notify_report_submitted(report_id: int, db: Session = Depends(get_db),
             Thank you!
             """
             
-            try:
-                send_email(admin.email, subject, body)
+            sent, error = send_email(admin.email, subject, body)
+            if sent:
                 notifications_sent += 1
-            except Exception as e:
-                print(f"Failed to send notification to {admin.email}: {e}")
+            else:
+                print(f"Failed to send notification to {admin.email}: {error}")
         
         return {
             "status": "success",

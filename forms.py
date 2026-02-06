@@ -113,14 +113,10 @@ def send_form_link(
         "Thank you."
     )
 
-    try:
-        sent = send_email(programme.recipient_email, subject, body)
-    except Exception as exc:
-        print(f"Email sending error: {exc}")
-        sent = False
-
+    sent, error = send_email(programme.recipient_email, subject, body)
     if not sent:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to send email")
+        detail = f"Failed to send email: {error}" if error else "Failed to send email"
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail)
 
     return {"message": "Form link sent", "expires_at": expires_at.isoformat()}
 
