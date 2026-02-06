@@ -293,12 +293,18 @@ async function saveProgramme(programmeId) {
 }
 
 async function sendFormLink(programmeId) {
+  const recipientEmail = document.getElementById(`email-${programmeId}`)?.value?.trim() || "";
+  if (!recipientEmail) {
+    showError("Recipient email is required before sending the link.");
+    return;
+  }
+
   try {
     const response = await fetch(`${API_BASE}/forms/admin/send-link`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ programme_id: programmeId }),
+      body: JSON.stringify({ programme_id: programmeId, recipient_email: recipientEmail }),
     });
 
     if (!response.ok) {
