@@ -113,6 +113,7 @@ def send_form_link(
 
     sent, error = send_email(programme.recipient_email, subject, body)
     if not sent:
+        print(f"Failed to send email to {programme.recipient_email}: {error}")
         detail = f"Failed to send email: {error}" if error else "Failed to send email"
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail)
 
