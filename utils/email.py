@@ -2,6 +2,7 @@ import json
 import os
 import smtplib
 import urllib.request
+import urllib.error
 from email.message import EmailMessage
 from dotenv import load_dotenv
 
@@ -23,6 +24,8 @@ def _send_resend(to_email: str, subject: str, body: str) -> tuple[bool, str | No
         return False, "RESEND_API_KEY is not configured"
     if not RESEND_FROM:
         return False, "RESEND_FROM is not configured"
+    if not to_email:
+        return False, "Recipient email is missing"
 
     payload = {
         "from": RESEND_FROM,
@@ -42,9 +45,19 @@ def _send_resend(to_email: str, subject: str, body: str) -> tuple[bool, str | No
     )
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
-            if resp.status >= 200 and resp.status < 300:
+            if 200 <= resp.status < 300:
                 return True, None
-            return False, f"Resend API responded with status {resp.status}"
+            try:
+                detail = resp.read().decode("utf-8", errors="ignore")
+            except Exception:
+                detail = ""
+            return False, f"Resend API responded with status {resp.status}{': ' + detail if detail else ''}"
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = exc.read().decode("utf-8", errors="ignore")
+        except Exception:
+            detail = ""
+        return False, f"Resend API error {exc.code}{': ' + detail if detail else ''}"
     except Exception as exc:
         return False, str(exc)
 
@@ -63,6 +76,8 @@ def send_email(to_email: str, subject: str, body: str) -> tuple[bool, str | None
 
     if not SMTP_HOST:
         return False, "SMTP_HOST is not configured"
+    if not to_email:
+        return False, "Recipient email is missing"
 
     msg = EmailMessage()
     msg["Subject"] = subject

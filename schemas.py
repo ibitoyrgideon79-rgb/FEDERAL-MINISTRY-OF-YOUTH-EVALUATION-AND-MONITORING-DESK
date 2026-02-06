@@ -33,7 +33,7 @@ class ProgrammeUpdate(BaseModel):
 
 class FormLinkRequest(BaseModel):
     programme_id: int = Field(..., ge=1)
-    recipient_email: Optional[EmailStr] = None
+    recipient_email: EmailStr
 
 class PublicFormSubmission(BaseModel):
     programme_name: str

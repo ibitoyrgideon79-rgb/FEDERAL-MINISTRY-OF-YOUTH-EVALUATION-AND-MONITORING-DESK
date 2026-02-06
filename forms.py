@@ -74,16 +74,14 @@ def send_form_link(
     programme = db.query(Programme).filter(Programme.id == payload.programme_id).first()
     if not programme:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Programme not found")
-    if payload.recipient_email:
-        normalized_email = payload.recipient_email.strip().lower()
-        if programme.recipient_email != normalized_email:
-            programme.recipient_email = normalized_email
-            db.add(programme)
-            db.commit()
-            db.refresh(programme)
-
-    if not programme.recipient_email:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Programme has no recipient email")
+    normalized_email = payload.recipient_email.strip().lower()
+    if not normalized_email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recipient email is required")
+    if programme.recipient_email != normalized_email:
+        programme.recipient_email = normalized_email
+        db.add(programme)
+        db.commit()
+        db.refresh(programme)
 
     try:
         token, expires_at = generate_form_token(programme.id, programme.recipient_email)

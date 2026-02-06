@@ -340,6 +340,8 @@ async function loadFormSubmissions() {
       return;
     }
 
+    const programmeMap = new Map(programmesCache.map((p) => [p.id, p.name]));
+
     if (isMobileView()) {
       const cards = submissions.map((s) => `
         <div class="admin-card">
@@ -353,7 +355,6 @@ async function loadFormSubmissions() {
       return;
     }
 
-    const programmeMap = new Map(programmesCache.map((p) => [p.id, p.name]));
     const rows = submissions.map((s) => `
       <tr>
         <td>${programmeMap.get(s.programme_id) || s.programme_id || "N/A"}</td>
