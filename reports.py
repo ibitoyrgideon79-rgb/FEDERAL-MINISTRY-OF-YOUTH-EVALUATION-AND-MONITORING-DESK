@@ -65,7 +65,43 @@ def list_reports(current_user: User = Depends(get_current_user), db: Session = D
         reports = db.query(MonthlyReport).order_by(MonthlyReport.created_at.desc()).all()
     else:
         reports = db.query(MonthlyReport).filter(MonthlyReport.submitted_by == current_user.id).order_by(MonthlyReport.created_at.desc()).all()
-    return reports
+    if reports:
+        return reports
+
+    submissions = (
+        db.query(FormSubmission)
+        .order_by(FormSubmission.submitted_at.desc())
+        .all()
+    )
+    fallback = []
+    for submission in submissions:
+        try:
+            data = json.loads(submission.form_data)
+        except Exception:
+            data = {}
+        fallback.append(
+            {
+                "id": submission.id,
+                "programme_name": data.get("programme_name") or "",
+                "focal_department": data.get("focal_department"),
+                "focal_aide_hm": data.get("focal_aide_hm"),
+                "focal_ministry_official": data.get("focal_ministry_official"),
+                "reporting_month": data.get("reporting_month"),
+                "programme_launch_date": data.get("programme_launch_date"),
+                "total_youth_registered": data.get("total_youth_registered") or 0,
+                "youth_trained": data.get("youth_trained") or 0,
+                "youth_funded": data.get("youth_funded") or 0,
+                "youth_with_outcomes": data.get("youth_with_outcomes") or 0,
+                "partnerships": data.get("partnerships"),
+                "challenges": data.get("challenges"),
+                "mitigation_strategies": data.get("mitigation_strategies"),
+                "scale_up_plans": data.get("scale_up_plans"),
+                "success_story": data.get("success_story"),
+                "submitted_by": None,
+                "created_at": submission.submitted_at.isoformat() if submission.submitted_at else None,
+            }
+        )
+    return fallback
 
 @router.get("/dashboard", response_model=DashboardResponse)
 def dashboard(db: Session = Depends(get_db), admin_user=Depends(require_admin)):

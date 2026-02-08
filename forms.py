@@ -98,7 +98,8 @@ def _build_form_link(
         print(f"Error generating form token: {exc}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to generate token")
 
-    base_url = os.getenv("APP_BASE_URL") or str(request.base_url).rstrip("/")
+    base_url = os.getenv("APP_BASE_URL") or str(request.base_url)
+    base_url = base_url.rstrip("/")
     form_link = f"{base_url}/forms/{programme.id}?token={token}"
     return form_link, expires_at
 
