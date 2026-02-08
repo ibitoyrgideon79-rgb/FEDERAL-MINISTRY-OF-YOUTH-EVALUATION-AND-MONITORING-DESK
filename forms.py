@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
-from models import Programme, FormToken, FormSubmission
+from models import Programme, FormToken, FormSubmission, MonthlyReport
 from schemas import FormLinkRequest, PublicFormSubmission, FormSubmissionOut
 from utils.auth_utils import require_admin
 from utils.email import send_email
@@ -196,12 +196,16 @@ def submit_form(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Programme name mismatch")
 
     try:
+        payload_dict = payload.dict()
+        payload_dict["programme_name"] = programme.name
         submission = FormSubmission(
             programme_id=programme.id,
             recipient_email=recipient_email,
-            form_data=json.dumps(payload.dict(), default=str),
+            form_data=json.dumps(payload_dict, default=str),
         )
+        report = MonthlyReport(**payload_dict)
         db.add(submission)
+        db.add(report)
         if FORM_TOKEN_ONE_TIME and token_row:
             # Prevent token reuse after successful submission.
             token_row.used = True
@@ -213,16 +217,17 @@ def submit_form(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to save submission")
 
     try:
-        admin_email = os.getenv("ADMIN_EMAIL", "")
-        if admin_email:
-            subject = f"New Form Submission: {programme.name}"
-            body = (
-                "Hello Admin,\n\n"
-                f"A new form submission has been received for {programme.name}.\n"
-                f"Submitted at: {submission.submitted_at}\n\n"
-                "Please review it in the admin dashboard.\n"
-            )
-            send_email(admin_email, subject, body)
+        if os.getenv("EMAIL_BACKEND", "console").lower() != "console":
+            admin_email = os.getenv("ADMIN_EMAIL", "")
+            if admin_email:
+                subject = f"New Form Submission: {programme.name}"
+                body = (
+                    "Hello Admin,\n\n"
+                    f"A new form submission has been received for {programme.name}.\n"
+                    f"Submitted at: {submission.submitted_at}\n\n"
+                    "Please review it in the admin dashboard.\n"
+                )
+                send_email(admin_email, subject, body)
     except Exception as exc:
         print(f"Failed to notify admin: {exc}")
 

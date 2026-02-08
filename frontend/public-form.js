@@ -1,4 +1,46 @@
 const API_BASE = window.location.origin;
+const EMAILJS_CONFIG = window.EMAILJS_CONFIG || {};
+let emailjsReady = false;
+
+function isEmailJSConfigured() {
+  return (
+    EMAILJS_CONFIG &&
+    typeof EMAILJS_CONFIG.serviceId === "string" &&
+    EMAILJS_CONFIG.serviceId.trim() &&
+    typeof EMAILJS_CONFIG.templateId === "string" &&
+    EMAILJS_CONFIG.templateId.trim() &&
+    typeof EMAILJS_CONFIG.publicKey === "string" &&
+    EMAILJS_CONFIG.publicKey.trim() &&
+    typeof EMAILJS_CONFIG.adminEmail === "string" &&
+    EMAILJS_CONFIG.adminEmail.trim()
+  );
+}
+
+function initEmailJS() {
+  if (emailjsReady) return;
+  if (!window.emailjs) return;
+  if (!isEmailJSConfigured()) return;
+  window.emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
+  emailjsReady = true;
+}
+
+async function sendAdminNotification({ subject, message }) {
+  if (!window.emailjs) return;
+  if (!isEmailJSConfigured()) return;
+  initEmailJS();
+
+  const templateParams = {
+    to_email: EMAILJS_CONFIG.adminEmail,
+    subject,
+    message,
+  };
+
+  await window.emailjs.send(
+    EMAILJS_CONFIG.serviceId,
+    EMAILJS_CONFIG.templateId,
+    templateParams,
+  );
+}
 
 function getToken() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -78,6 +120,29 @@ async function handleFormSubmit(e) {
     successMsg.style.display = "block";
     document.getElementById("error-message").style.display = "none";
     document.getElementById("monitoring-form").reset();
+
+    const subject = `New Form Submission: ${formData.programme_name}`;
+    const message = [
+      "Hello Admin,",
+      "",
+      "A new form submission has been received.",
+      "",
+      `Programme: ${formData.programme_name}`,
+      `Department: ${formData.focal_department || "N/A"}`,
+      `Reporting Month: ${formData.reporting_month}`,
+      `Total Registered: ${formData.total_youth_registered}`,
+      `Youth Trained: ${formData.youth_trained}`,
+      `Youth Funded: ${formData.youth_funded}`,
+      `Youth With Outcomes: ${formData.youth_with_outcomes}`,
+      "",
+      "Please review it in the admin dashboard.",
+    ].join("\n");
+
+    try {
+      await sendAdminNotification({ subject, message });
+    } catch (err) {
+      console.warn("Admin email notification failed:", err);
+    }
   } catch (err) {
     console.error("Error submitting report:", err);
     showError(err.message || "An error occurred while submitting your report");

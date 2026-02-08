@@ -51,6 +51,47 @@ function isMobileView() {
   return window.matchMedia("(max-width: 768px)").matches;
 }
 
+function escapeHtml(value) {
+  const str = value == null ? "" : String(value);
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatFormData(data) {
+  if (!data || typeof data !== "object") return "<div>No data</div>";
+
+  const orderedFields = [
+    ["programme_name", "Programme Name"],
+    ["focal_department", "Focal Department"],
+    ["focal_aide_hm", "Focal Aide of HM"],
+    ["focal_ministry_official", "Focal Ministry Official"],
+    ["reporting_month", "Reporting Month"],
+    ["programme_launch_date", "Programme Launch Date"],
+    ["total_youth_registered", "Total Youth Registered"],
+    ["youth_trained", "Youth Trained"],
+    ["youth_funded", "Youth Funded"],
+    ["youth_with_outcomes", "Youth With Outcomes"],
+    ["partnerships", "Partnerships"],
+    ["challenges", "Challenges"],
+    ["mitigation_strategies", "Mitigation Strategies"],
+    ["scale_up_plans", "Scale-Up Plans"],
+    ["success_story", "Success Story"],
+  ];
+
+  const rows = orderedFields
+    .filter(([key]) => key in data)
+    .map(([key, label]) => {
+      const value = escapeHtml(data[key] ?? "");
+      return `<div><strong>${label}:</strong> ${value}</div>`;
+    });
+
+  return rows.join("");
+}
+
 async function loadAdminDashboard() {
   try {
     // Load stats
@@ -422,7 +463,7 @@ async function loadFormSubmissions() {
           <h4>${programmeMap.get(s.programme_id) || s.programme_id || "N/A"}</h4>
           <div class="admin-field"><label>Recipient Email</label>${s.recipient_email}</div>
           <div class="admin-field"><label>Submitted At</label>${s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "N/A"}</div>
-          <div class="admin-field"><label>Form Data</label><pre style="white-space: pre-wrap; margin: 0;">${JSON.stringify(s.form_data, null, 2)}</pre></div>
+          <div class="admin-field"><label>Form Data</label><div>${formatFormData(s.form_data)}</div></div>
         </div>
       `).join("");
       container.innerHTML = `<div class="admin-cards">${cards}</div>`;
@@ -434,7 +475,7 @@ async function loadFormSubmissions() {
         <td>${programmeMap.get(s.programme_id) || s.programme_id || "N/A"}</td>
         <td>${s.recipient_email}</td>
         <td>${s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "N/A"}</td>
-        <td><pre style="white-space: pre-wrap; max-width: 420px;">${JSON.stringify(s.form_data, null, 2)}</pre></td>
+        <td><div style="max-width: 420px;">${formatFormData(s.form_data)}</div></td>
       </tr>
     `).join("");
 
