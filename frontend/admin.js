@@ -1,5 +1,51 @@
 const API_BASE = window.location.origin; // Use same origin as frontend
 let programmesCache = [];
+const EMAILJS_CONFIG = window.EMAILJS_CONFIG || {};
+let emailjsReady = false;
+
+function isEmailJSConfigured() {
+  return (
+    EMAILJS_CONFIG &&
+    typeof EMAILJS_CONFIG.serviceId === "string" &&
+    EMAILJS_CONFIG.serviceId.trim() &&
+    typeof EMAILJS_CONFIG.templateId === "string" &&
+    EMAILJS_CONFIG.templateId.trim() &&
+    typeof EMAILJS_CONFIG.publicKey === "string" &&
+    EMAILJS_CONFIG.publicKey.trim()
+  );
+}
+
+function initEmailJS() {
+  if (emailjsReady) return;
+  if (!window.emailjs) return;
+  if (!isEmailJSConfigured()) return;
+  window.emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
+  emailjsReady = true;
+}
+
+async function sendEmailJS({ toEmail, subject, message, formLink, programmeName }) {
+  if (!window.emailjs) {
+    throw new Error("EmailJS library is not loaded");
+  }
+  if (!isEmailJSConfigured()) {
+    throw new Error("EmailJS is not configured");
+  }
+  initEmailJS();
+
+  const templateParams = {
+    to_email: toEmail,
+    subject,
+    message,
+    form_link: formLink,
+    programme_name: programmeName,
+  };
+
+  return window.emailjs.send(
+    EMAILJS_CONFIG.serviceId,
+    EMAILJS_CONFIG.templateId,
+    templateParams,
+  );
+}
 
 function isMobileView() {
   return window.matchMedia("(max-width: 768px)").matches;
@@ -300,7 +346,10 @@ async function sendFormLink(programmeId) {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/forms/admin/send-link`, {
+    const programme = programmesCache.find((p) => p.id === programmeId) || {};
+    const programmeName = programme.name || "Programme";
+
+    const response = await fetch(`${API_BASE}/forms/admin/create-link`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -309,8 +358,33 @@ async function sendFormLink(programmeId) {
 
     if (!response.ok) {
       const data = await response.json();
-      throw new Error(data.detail || "Failed to send form link");
+      throw new Error(data.detail || "Failed to generate form link");
     }
+
+    const data = await response.json();
+    const formLink = data.form_link;
+
+    const subject = `Form Submission Link: ${programmeName}`;
+    const message = [
+      "Hello,",
+      "",
+      `You have been invited to submit a form for the programme: ${programmeName}.`,
+      "",
+      "Please use this secure link to submit your form:",
+      formLink,
+      "",
+      "This link is unique to your email address and may expire.",
+      "",
+      "Thank you.",
+    ].join("\n");
+
+    await sendEmailJS({
+      toEmail: recipientEmail,
+      subject,
+      message,
+      formLink,
+      programmeName,
+    });
 
     showMessage("Form link sent successfully.");
   } catch (err) {

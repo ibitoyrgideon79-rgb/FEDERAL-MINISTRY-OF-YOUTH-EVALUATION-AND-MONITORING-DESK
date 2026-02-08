@@ -64,17 +64,16 @@ def _validate_token(programme_id: int, token: str, db: Session):
     return programme, payload["email"], token_row
 
 
-@router.post("/admin/send-link")
-def send_form_link(
-    payload: FormLinkRequest,
+def _build_form_link(
+    programme_id: int,
+    recipient_email: str,
     request: Request,
-    db: Session = Depends(get_db),
-    admin_user=Depends(require_admin),
-):
-    programme = db.query(Programme).filter(Programme.id == payload.programme_id).first()
+    db: Session,
+) -> tuple[str, datetime]:
+    programme = db.query(Programme).filter(Programme.id == programme_id).first()
     if not programme:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Programme not found")
-    normalized_email = payload.recipient_email.strip().lower()
+    normalized_email = recipient_email.strip().lower()
     if not normalized_email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recipient email is required")
     if programme.recipient_email != normalized_email:
@@ -101,6 +100,26 @@ def send_form_link(
 
     base_url = os.getenv("APP_BASE_URL") or str(request.base_url).rstrip("/")
     form_link = f"{base_url}/forms/{programme.id}?token={token}"
+    return form_link, expires_at
+
+
+@router.post("/admin/send-link")
+def send_form_link(
+    payload: FormLinkRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user=Depends(require_admin),
+):
+    programme = db.query(Programme).filter(Programme.id == payload.programme_id).first()
+    if not programme:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Programme not found")
+
+    form_link, expires_at = _build_form_link(
+        programme_id=programme.id,
+        recipient_email=payload.recipient_email,
+        request=request,
+        db=db,
+    )
 
     subject = f"Form Submission Link: {programme.name}"
     body = (
@@ -118,6 +137,33 @@ def send_form_link(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail)
 
     return {"message": "Form link sent", "expires_at": expires_at.isoformat()}
+
+
+@router.post("/admin/create-link")
+def create_form_link(
+    payload: FormLinkRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user=Depends(require_admin),
+):
+    programme = db.query(Programme).filter(Programme.id == payload.programme_id).first()
+    if not programme:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Programme not found")
+
+    form_link, expires_at = _build_form_link(
+        programme_id=programme.id,
+        recipient_email=payload.recipient_email,
+        request=request,
+        db=db,
+    )
+
+    return {
+        "message": "Form link generated",
+        "form_link": form_link,
+        "expires_at": expires_at.isoformat(),
+        "programme_name": programme.name,
+        "recipient_email": programme.recipient_email,
+    }
 
 
 @router.get("/{programme_id}")
