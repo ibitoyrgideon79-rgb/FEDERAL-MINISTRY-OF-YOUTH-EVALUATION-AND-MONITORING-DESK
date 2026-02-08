@@ -1,8 +1,9 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
 from schemas import MonthlyReportCreate, MonthlyReportOut, DashboardResponse
-from models import MonthlyReport, User
+from models import MonthlyReport, User, FormSubmission
 from utils.auth_utils import get_current_user, require_admin
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -69,11 +70,28 @@ def list_reports(current_user: User = Depends(get_current_user), db: Session = D
 @router.get("/dashboard", response_model=DashboardResponse)
 def dashboard(db: Session = Depends(get_db), admin_user=Depends(require_admin)):
     reports = db.query(MonthlyReport).all()
-    total_registered = sum(r.total_youth_registered for r in reports)
-    total_trained = sum(r.youth_trained for r in reports)
-    total_funded = sum(r.youth_funded for r in reports)
-    total_outcomes = sum(r.youth_with_outcomes for r in reports)
-    total_reports = len(reports)
+    if reports:
+        total_registered = sum(r.total_youth_registered for r in reports)
+        total_trained = sum(r.youth_trained for r in reports)
+        total_funded = sum(r.youth_funded for r in reports)
+        total_outcomes = sum(r.youth_with_outcomes for r in reports)
+        total_reports = len(reports)
+    else:
+        submissions = db.query(FormSubmission).all()
+        total_registered = 0
+        total_trained = 0
+        total_funded = 0
+        total_outcomes = 0
+        for s in submissions:
+            try:
+                data = json.loads(s.form_data)
+            except Exception:
+                data = {}
+            total_registered += int(data.get("total_youth_registered") or 0)
+            total_trained += int(data.get("youth_trained") or 0)
+            total_funded += int(data.get("youth_funded") or 0)
+            total_outcomes += int(data.get("youth_with_outcomes") or 0)
+        total_reports = len(submissions)
     training_percentage = (total_trained / total_registered * 100) if total_registered > 0 else 0.0
     return {
         "total_youth_registered": total_registered,
