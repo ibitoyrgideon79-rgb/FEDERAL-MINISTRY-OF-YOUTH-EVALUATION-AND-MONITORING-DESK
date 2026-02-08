@@ -17,6 +17,10 @@ FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_USERNAME)
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "console").lower()
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 RESEND_FROM = os.getenv("RESEND_FROM", FROM_EMAIL)
+EMAILJS_SERVICE_ID = os.getenv("EMAILJS_SERVICE_ID")
+EMAILJS_TEMPLATE_ID = os.getenv("EMAILJS_TEMPLATE_ID")
+EMAILJS_PUBLIC_KEY = os.getenv("EMAILJS_PUBLIC_KEY")
+EMAILJS_PRIVATE_KEY = os.getenv("EMAILJS_PRIVATE_KEY")
 
 
 def _send_resend(to_email: str, subject: str, body: str) -> tuple[bool, str | None]:
@@ -62,6 +66,55 @@ def _send_resend(to_email: str, subject: str, body: str) -> tuple[bool, str | No
         return False, str(exc)
 
 
+def _send_emailjs(to_email: str, subject: str, body: str) -> tuple[bool, str | None]:
+    if not EMAILJS_SERVICE_ID:
+        return False, "EMAILJS_SERVICE_ID is not configured"
+    if not EMAILJS_TEMPLATE_ID:
+        return False, "EMAILJS_TEMPLATE_ID is not configured"
+    if not EMAILJS_PUBLIC_KEY:
+        return False, "EMAILJS_PUBLIC_KEY is not configured"
+    if not to_email:
+        return False, "Recipient email is missing"
+
+    payload = {
+        "service_id": EMAILJS_SERVICE_ID,
+        "template_id": EMAILJS_TEMPLATE_ID,
+        "user_id": EMAILJS_PUBLIC_KEY,
+        "template_params": {
+            "to_email": to_email,
+            "subject": subject,
+            "message": body,
+        },
+    }
+    if EMAILJS_PRIVATE_KEY:
+        payload["accessToken"] = EMAILJS_PRIVATE_KEY
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.emailjs.com/api/v1.0/email/send",
+        data=data,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            if 200 <= resp.status < 300:
+                return True, None
+            try:
+                detail = resp.read().decode("utf-8", errors="ignore")
+            except Exception:
+                detail = ""
+            return False, f"EmailJS API responded with status {resp.status}{': ' + detail if detail else ''}"
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = exc.read().decode("utf-8", errors="ignore")
+        except Exception:
+            detail = ""
+        return False, f"EmailJS API error {exc.code}{': ' + detail if detail else ''}"
+    except Exception as exc:
+        return False, str(exc)
+
+
 def send_email(to_email: str, subject: str, body: str) -> tuple[bool, str | None]:
     """Send an email using the configured backend."""
     if EMAIL_BACKEND == "console":
@@ -70,6 +123,9 @@ def send_email(to_email: str, subject: str, body: str) -> tuple[bool, str | None
 
     if EMAIL_BACKEND == "resend":
         return _send_resend(to_email, subject, body)
+
+    if EMAIL_BACKEND in ("emailjs", "http"):
+        return _send_emailjs(to_email, subject, body)
 
     if EMAIL_BACKEND != "smtp":
         return False, f"Unsupported EMAIL_BACKEND '{EMAIL_BACKEND}'"
