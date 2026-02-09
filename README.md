@@ -13,4 +13,4 @@ Features
 - Admin user: set ADMIN_EMAIL in your .env to grant admin role to that email
 - Create and fetch monthly reports (users can access their own reports; admin can access all)
 - Dashboard aggregation
-- Programmes list (preloaded)
+- Programmes list (preloaded but if seeing this on github, you can edit the code or set to fetch directly to your postgres or any db youo use)

@@ -52,6 +52,21 @@ function getProgrammeId() {
   return parts[parts.length - 1];
 }
 
+function formatErrorDetail(detail) {
+  if (!detail) return "";
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return detail.map((d) => formatErrorDetail(d)).join("; ");
+  if (typeof detail === "object") {
+    if (detail.msg) return detail.msg;
+    try {
+      return JSON.stringify(detail);
+    } catch (e) {
+      return String(detail);
+    }
+  }
+  return String(detail);
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   const token = getToken();
   const programmeId = getProgrammeId();
@@ -65,7 +80,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const response = await fetch(`${API_BASE}/forms/${programmeId}/info?token=${encodeURIComponent(token)}`);
     if (!response.ok) {
       const data = await response.json();
-      throw new Error(data.detail || "Failed to load form info");
+      const detail = formatErrorDetail(data.detail);
+      if (detail.toLowerCase().includes("token already used")) {
+        showSubmittedState();
+        return;
+      }
+      throw new Error(detail || "Failed to load form info");
     }
     const info = await response.json();
     document.getElementById("programme_name").value = info.programme_name || "";
@@ -83,6 +103,12 @@ async function handleFormSubmit(e) {
 
   const token = getToken();
   const programmeId = getProgrammeId();
+  const submitBtn = document.getElementById("submit-btn");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+    submitBtn.style.background = "#9e9e9e";
+  }
 
   const formData = {
     programme_name: document.getElementById("programme_name").value,
@@ -112,7 +138,8 @@ async function handleFormSubmit(e) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.detail || "Failed to submit report");
+      const detail = formatErrorDetail(data.detail);
+      throw new Error(detail || "Failed to submit report");
     }
 
     const successMsg = document.getElementById("success-message");
@@ -120,6 +147,13 @@ async function handleFormSubmit(e) {
     successMsg.style.display = "block";
     document.getElementById("error-message").style.display = "none";
     document.getElementById("monitoring-form").reset();
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitted ✓";
+      submitBtn.style.background = "#b0b0b0";
+    }
+    showSubmittedState();
 
     const subject = `New Form Submission: ${formData.programme_name}`;
     const message = [
@@ -146,6 +180,11 @@ async function handleFormSubmit(e) {
   } catch (err) {
     console.error("Error submitting report:", err);
     showError(err.message || "An error occurred while submitting your report");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Report";
+      submitBtn.style.background = "#006400";
+    }
   }
 }
 
@@ -153,6 +192,17 @@ function showError(message) {
   const errorDiv = document.getElementById("error-message");
   errorDiv.textContent = message;
   errorDiv.style.display = "block";
+}
+
+function showSubmittedState() {
+  const form = document.getElementById("monitoring-form");
+  const panel = document.getElementById("submitted-panel");
+  const success = document.getElementById("success-message");
+  const error = document.getElementById("error-message");
+  if (form) form.style.display = "none";
+  if (success) success.style.display = "none";
+  if (error) error.style.display = "none";
+  if (panel) panel.style.display = "block";
 }
 
 function goBack() {

@@ -14,6 +14,7 @@ load_dotenv()
 OTP_EXP_MINUTES = int(os.getenv("OTP_EXP_MINUTES", 5))
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").lower()
 ADMIN_BYPASS_KEY = os.getenv("ADMIN_BYPASS_KEY", "")
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "console").lower()
 
 
 def _utc_now():
@@ -43,6 +44,9 @@ def request_otp(payload: OTPRequest, db: Session = Depends(get_db)):
 
     subject = "Your login OTP"
     body = f"Your OTP is {code}. It expires in {OTP_EXP_MINUTES} minutes."
+    if EMAIL_BACKEND in ("console", "emailjs"):
+        return {"message": "OTP generated", "otp_code": code}
+
     sent, error = send_email(payload.email, subject, body)
     if not sent:
         detail = f"Failed to send OTP email: {error}" if error else "Failed to send OTP email"

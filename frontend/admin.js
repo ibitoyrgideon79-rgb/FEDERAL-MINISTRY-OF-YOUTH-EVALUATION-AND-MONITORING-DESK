@@ -269,6 +269,7 @@ async function loadProgrammes() {
         return `
           <div class="admin-card">
             <h4>${p.name}</h4>
+            <div class="admin-field"><label>Status</label><span id="sent-${p.id}">Not sent</span></div>
             <div class="admin-field"><label>Department</label>${p.department || "Unspecified"}</div>
             <div class="admin-field">
               <label>Description</label>
@@ -282,12 +283,13 @@ async function loadProgrammes() {
             <div class="admin-field"><label>Last Submitted</label>${lastSubmitted}</div>
             <div class="admin-actions">
               <button onclick="saveProgramme(${p.id})" style="background: #006400; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">Save</button>
-              <button onclick="sendFormLink(${p.id})" style="background: #004d00; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">Send Link</button>
+              <button id="send-${p.id}" onclick="sendFormLink(${p.id})" style="background: #004d00; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">Send Link</button>
             </div>
           </div>
         `;
       }).join("");
       container.innerHTML = `<div class="admin-cards">${cards}</div>`;
+      maybeAutoSendLinks();
       return;
     }
 
@@ -298,6 +300,7 @@ async function loadProgrammes() {
         return `
       <tr>
         <td><strong>${p.name}</strong></td>
+        <td><span id="sent-${p.id}">Not sent</span></td>
         <td>${p.department || "Unspecified"}</td>
         <td>
           <input type="text" id="desc-${p.id}" value="${p.description || ""}" placeholder="Description" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;" />
@@ -309,7 +312,7 @@ async function loadProgrammes() {
         <td>${lastSubmitted}</td>
         <td style="white-space: nowrap;">
           <button onclick="saveProgramme(${p.id})" style="background: #006400; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-right: 6px;">Save</button>
-          <button onclick="sendFormLink(${p.id})" style="background: #004d00; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">Send Link</button>
+          <button id="send-${p.id}" onclick="sendFormLink(${p.id})" style="background: #004d00; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">Send Link</button>
         </td>
       </tr>
         `;
@@ -321,6 +324,7 @@ async function loadProgrammes() {
         <thead>
           <tr>
             <th>Programme Name</th>
+            <th>Status</th>
             <th>Department</th>
             <th>Description</th>
             <th>Recipient Email</th>
@@ -334,6 +338,7 @@ async function loadProgrammes() {
         </tbody>
       </table>
     `;
+    maybeAutoSendLinks();
   } catch (err) {
     console.error("Error loading programmes:", err);
     showError("Failed to load programmes.");
@@ -380,58 +385,157 @@ async function saveProgramme(programmeId) {
 }
 
 async function sendFormLink(programmeId) {
-  const recipientEmail = document.getElementById(`email-${programmeId}`)?.value?.trim() || "";
-  if (!recipientEmail) {
+  const recipientRaw = document.getElementById(`email-${programmeId}`)?.value?.trim() || "";
+  if (!recipientRaw) {
     showError("Recipient email is required before sending the link.");
     return;
   }
 
   try {
+    setSendState(programmeId, "sending");
     const programme = programmesCache.find((p) => p.id === programmeId) || {};
     const programmeName = programme.name || "Programme";
 
-    const response = await fetch(`${API_BASE}/forms/admin/create-link`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ programme_id: programmeId, recipient_email: recipientEmail }),
-    });
+    const recipients = recipientRaw
+      .split(/[;,]/)
+      .map((email) => email.trim())
+      .filter(Boolean);
 
-    if (!response.ok) {
+    for (const recipientEmail of recipients) {
+      const response = await fetch(`${API_BASE}/forms/admin/create-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ programme_id: programmeId, recipient_email: recipientEmail }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || "Failed to generate form link");
+      }
+
       const data = await response.json();
-      throw new Error(data.detail || "Failed to generate form link");
+      const formLink = data.form_link;
+
+      const subject = `Form Submission Link: ${programmeName}`;
+      const message = [
+        "Hello,",
+        "",
+        `You have been invited to submit a form for the programme: ${programmeName}.`,
+        "",
+        "Please use this secure link to submit your form:",
+        formLink,
+        "",
+        "This link is unique to your email address and may expire.",
+        "",
+        "Thank you.",
+      ].join("\n");
+
+      await sendEmailJS({
+        toEmail: recipientEmail,
+        subject,
+        message,
+        formLink,
+        programmeName,
+      });
     }
 
-    const data = await response.json();
-    const formLink = data.form_link;
-
-    const subject = `Form Submission Link: ${programmeName}`;
-    const message = [
-      "Hello,",
-      "",
-      `You have been invited to submit a form for the programme: ${programmeName}.`,
-      "",
-      "Please use this secure link to submit your form:",
-      formLink,
-      "",
-      "This link is unique to your email address and may expire.",
-      "",
-      "Thank you.",
-    ].join("\n");
-
-    await sendEmailJS({
-      toEmail: recipientEmail,
-      subject,
-      message,
-      formLink,
-      programmeName,
-    });
-
+    setSendState(programmeId, "sent");
     showMessage("Form link sent successfully.");
   } catch (err) {
     console.error("Error sending form link:", err);
+    setSendState(programmeId, "idle");
     showError(err.message || "Failed to send form link.");
   }
+}
+
+function setSendState(programmeId, state) {
+  const btn = document.getElementById(`send-${programmeId}`);
+  const status = document.getElementById(`sent-${programmeId}`);
+  if (!btn || !status) return;
+
+  if (state === "sending") {
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+    btn.style.background = "#9e9e9e";
+    status.textContent = "Sending...";
+    return;
+  }
+
+  if (state === "sent") {
+    btn.disabled = true;
+    btn.textContent = "Sent ✓";
+    btn.style.background = "#b0b0b0";
+    status.textContent = "Sent ✓";
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = "Send Link";
+      btn.style.background = "#004d00";
+      status.textContent = "Not sent";
+    }, 10000);
+    return;
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Send Link";
+  btn.style.background = "#004d00";
+  status.textContent = "Not sent";
+}
+
+async function sendAllLinks() {
+  const btn = document.getElementById("send-all-btn");
+  if (!programmesCache.length) {
+    showError("No programmes loaded yet.");
+    return;
+  }
+
+  const toSend = programmesCache
+    .map((p) => ({ id: p.id, email: document.getElementById(`email-${p.id}`)?.value?.trim() || "" }))
+    .filter((p) => p.email);
+
+  if (!toSend.length) {
+    showError("No recipient emails found.");
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+    btn.style.background = "#b0b0b0";
+  }
+  showMessage(`Sending ${toSend.length} links...`);
+
+  for (const item of toSend) {
+    await sendFormLink(item.id);
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Sent ✓";
+    btn.style.background = "#b0b0b0";
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = "Send All Links";
+      btn.style.background = "#006400";
+    }, 10000);
+  }
+}
+
+function maybeAutoSendLinks() {
+  const now = new Date();
+  const day = now.getDate();
+  if (day !== 28) return;
+
+  const key = `auto_send_${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}`;
+  if (localStorage.getItem(key)) return;
+
+  sendAllLinks()
+    .then(() => {
+      localStorage.setItem(key, "1");
+    })
+    .catch(() => {
+      // ignore
+    });
 }
 
 async function loadFormSubmissions() {

@@ -1,5 +1,50 @@
 const API_BASE = window.location.origin; // Use same origin as frontend
 let currentEmail = "";
+const EMAILJS_CONFIG = window.EMAILJS_CONFIG || {};
+let emailjsReady = false;
+
+function isEmailJSConfigured() {
+  return (
+    EMAILJS_CONFIG &&
+    typeof EMAILJS_CONFIG.serviceId === "string" &&
+    EMAILJS_CONFIG.serviceId.trim() &&
+    typeof EMAILJS_CONFIG.templateId === "string" &&
+    EMAILJS_CONFIG.templateId.trim() &&
+    typeof EMAILJS_CONFIG.publicKey === "string" &&
+    EMAILJS_CONFIG.publicKey.trim()
+  );
+}
+
+function initEmailJS() {
+  if (emailjsReady) return;
+  if (!window.emailjs) return;
+  if (!isEmailJSConfigured()) return;
+  window.emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
+  emailjsReady = true;
+}
+
+async function sendOtpEmail(email, code) {
+  if (!window.emailjs) {
+    throw new Error("EmailJS library is not loaded");
+  }
+  if (!isEmailJSConfigured()) {
+    throw new Error("EmailJS is not configured");
+  }
+  initEmailJS();
+
+  const subject = "Your login OTP";
+  const message = `Your OTP is ${code}. It expires in ${EMAILJS_CONFIG.otpExpiryMinutes || 5} minutes.`;
+
+  return window.emailjs.send(
+    EMAILJS_CONFIG.serviceId,
+    EMAILJS_CONFIG.templateId,
+    {
+      to_email: email,
+      subject,
+      message,
+    },
+  );
+}
 
 function showEmailBox() {
   const emailBox = document.getElementById("email-box");
@@ -57,7 +102,21 @@ async function requestOtp() {
       return;
     }
 
+    const data = await response.json();
     currentEmail = email;
+
+    if (data && data.otp_code) {
+      try {
+        await sendOtpEmail(email, data.otp_code);
+      } catch (err) {
+        if (emailError) {
+          emailError.textContent = err.message || "Failed to send OTP email.";
+          emailError.style.display = "block";
+        }
+        return;
+      }
+    }
+
     showOtpBox();
   } catch (err) {
     console.error("Error requesting OTP:", err);

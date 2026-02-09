@@ -292,7 +292,10 @@
 
       <!-- All Programmes Section -->
       <div class="section">
-        <h2>Programmes & Form Links</h2>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <h2 style="margin: 0;">Programmes & Form Links</h2>
+          <button id="send-all-btn" onclick="sendAllLinks()" style="background: #006400; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer;">Send All Links</button>
+        </div>
         <div id="programmes-container">
           <div class="loading">Loading programmes...</div>
         </div>

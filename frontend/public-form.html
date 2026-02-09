@@ -228,6 +228,11 @@
 
       <div id="success-message" class="success-message">Report submitted successfully.</div>
       <div id="error-message" class="error-message"></div>
+      <div id="submitted-panel" class="success-message" style="display:none; text-align:center;">
+        <div style="font-size: 2.2rem; margin-bottom: 8px;">✓</div>
+        <div style="font-weight: 600;">Submitted</div>
+        <div style="margin-top: 6px;">This form has already been submitted.</div>
+      </div>
 
       <form id="monitoring-form">
 
@@ -345,7 +350,7 @@
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-submit">Submit Report</button>
+          <button type="submit" class="btn btn-submit" id="submit-btn">Submit Report</button>
           <button type="button" class="btn btn-cancel" onclick="goBack()">Cancel</button>
         </div>
       </form>
