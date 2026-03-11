@@ -6,6 +6,16 @@
   <title>Admin Dashboard - Federal Ministry of Youth Development</title>
   <link rel="stylesheet" href="style.css">
   <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #475569;
+      --brand: #0e6b44;
+      --brand-dark: #0a4e32;
+      --line: #dbe2ea;
+      --surface: #ffffff;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+
     main {
       background-color: #f5f5f5;
       min-height: 100vh;
@@ -28,37 +38,88 @@
       margin-bottom: 40px;
       flex-wrap: wrap;
       gap: 20px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .admin-title-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .admin-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--brand);
     }
 
     .admin-header h1 {
-      font-size: 2.2rem;
-      color: #006400;
+      font-size: 2rem;
+      color: var(--ink);
       margin: 0;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
     }
 
     .admin-badge {
-      background: #006400;
+      background: #e9f8ef;
+      color: var(--brand);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border: 1px solid #b2e7c9;
+      width: fit-content;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .analytics-link,
+    .logout-btn {
       color: white;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 0.9rem;
+      border: none;
+      padding: 11px 18px;
+      font-size: 0.95rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
       font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .analytics-link {
+      background: #0f766e;
+    }
+
+    .analytics-link:hover {
+      background: #0b5f59;
+      transform: translateY(-1px);
     }
 
     .logout-btn {
-      background: #006400;
-      color: white;
-      border: none;
-      padding: 12px 30px;
-      font-size: 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
+      background: var(--brand);
     }
 
     .logout-btn:hover {
-      background: #004d00;
-      transform: translateY(-2px);
+      background: var(--brand-dark);
+      transform: translateY(-1px);
     }
 
     .admin-stats {
@@ -265,24 +326,23 @@
   <main>
     <div class="admin-container">
       <div class="admin-header">
-        <div>
+        <div class="admin-title-wrap">
+          <span class="admin-eyebrow">Federal Ministry of Youth Development</span>
           <h1>Admin Dashboard</h1>
-          <span class="admin-badge">ADMIN</span>
+          <span class="admin-badge">Admin Access</span>
         </div>
-        <div style="display: flex; gap: 10px;">
-          <a href="/analytics.html" style="background-color: #006400; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 500; display: inline-block;">📊 Analytics</a>
-          <button class="logout-btn" onclick="logout()">LOGOUT</button>
+        <div class="header-actions">
+          <a href="/analytics.html" class="analytics-link">Analytics</a>
+          <button class="logout-btn" onclick="logout()">Log Out</button>
         </div>
       </div>
 
       <div id="error-container"></div>
 
-      <!-- Dashboard Stats -->
       <div class="admin-stats" id="stats-container">
         <div class="loading">Loading statistics...</div>
       </div>
 
-      <!-- All Reports Section (Admin View) -->
       <div class="section">
         <h2>All Reports (Admin View)</h2>
         <div id="reports-container">
@@ -290,10 +350,9 @@
         </div>
       </div>
 
-      <!-- All Programmes Section -->
       <div class="section">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-          <h2 style="margin: 0;">Programmes & Form Links</h2>
+          <h2 style="margin: 0;">Programmes and Form Links</h2>
           <button id="send-all-btn" onclick="sendAllLinks()" style="background: #006400; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer;">Send All Links</button>
         </div>
         <div id="programmes-container">
@@ -301,7 +360,6 @@
         </div>
       </div>
 
-      <!-- Form Submissions Section -->
       <div class="section">
         <h2>Form Submissions</h2>
         <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
@@ -317,7 +375,7 @@
   </main>
 
   <footer>
-    © 2026. All Rights Reserved. Federal Ministry of Youth Development
+    &copy; 2026. All Rights Reserved. Federal Ministry of Youth Development
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
